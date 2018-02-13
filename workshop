@@ -1,0 +1,261 @@
+####################################################
+Step 1 - Access Api token directly from application
+####################################################
+
+# In BenTen-workshop/config/default.json add your api.ai token
+{
+  "apiai" :{
+    "token" : "<your api token>"
+  }
+}
+
+# In BenTen-workshop/routes/benten.js
+# in the headers sections add the following
+
+var apiaiservice = apiai(apiaitoken);
+
+# Add the following code snippet above the last line
+
+router.get('/apiai', function (req, res) {
+    var sessionId = Math.floor(Math.random() * 99999999) + 1 ;
+    var request = apiaiservice.textRequest("hi", {
+        sessionId: sessionId
+    });
+
+    request.on('response', function(response) {
+        res.send(response);
+    });
+
+    request.end();
+
+});
+
+
+####################################################
+Step 2 - Slack Bot
+####################################################
+
+# In BenTen-workshop/config/default.json add your slack bot token
+{
+  "apiai" :{
+    "token" : "<Your api.ai token>"
+  },
+  "slackBot":{
+    "token" : "<Your slack bot token>"
+  }
+}
+
+# In BenTen-workshop/routes/benten.js
+# in the headers sections add the following - this is to read the bot token from config file
+
+
+var slack_bot_token = config.get('slackBot').token;
+
+# add the below line. This is to include the necessary slack client libraries
+
+var RTMClient = require('@slack/client').RtmClient;
+var CLIENT_EVENTS = require('@slack/client').CLIENT_EVENTS;
+var RTM_EVENTS = require('@slack/client').RTM_EVENTS;
+var rtm=new RTMClient(slack_bot_token);
+
+# Add the following code snippet above the last line.
+# This to establish a web-socket connection to slack
+
+rtm.start();
+
+# Add the below line after rtm.start() to make sure that authentication is successful
+
+rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, function(rtmStartData) {
+    console.log(rtmStartData);
+});
+
+# Add the below code to print messages as they come from the bot
+
+rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(data){
+    if(data.type == "message" && data.user != undefined) {
+        console.log(data);
+        console.log("*****************");
+        console.log(data.text);
+    }
+});
+
+# Replace the above with the following to respond back to the bot
+
+rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(data){
+    if(data.type == "message" && data.user != undefined) {
+        console.log(data);
+        console.log("*****************");
+        console.log(data.text);
+
+        if(data.type == "message" && data.user == undefined) return;
+
+        if(data.username !=undefined)
+            if(data.username.includes("test-bot" ))
+                return;
+
+         rtm.sendMessage("You typed "+ data.text,data.channel);
+
+    }
+});
+
+
+####################################################
+Step 3 - Stitching api.ai and slack bot together
+####################################################
+
+# In BenTen-workshop/routes/benten.js
+# replace the rtm.on(RTM_EVENTS.MESSAGE .......... code with the below snippet
+# this forwards all the messages to api.ai
+
+rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(data){
+    if(data.type == "message" && data.user != undefined) {
+        console.log(data);
+        console.log("*****************");
+        console.log(data.text);
+
+        if(data.type == "message" && data.user == undefined) return;
+
+        if(data.username !=undefined)
+            if(data.username.includes("test-bot" ))
+                return;
+
+         rtm.sendMessage("You typed "+ data.text,data.channel);
+
+         var request = apiaiservice.textRequest(data.text, {
+            sessionId: data.user,
+          });
+
+         request.end();
+    }
+});
+
+# Replace the above with below code snippet
+# to relay the responses from api.ai to slack bot
+
+rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(data){
+    if(data.type == "message" && data.user != undefined) {
+        console.log(data);
+        console.log("*****************");
+        console.log(data.text);
+
+        if(data.type == "message" && data.user == undefined) return;
+
+        if(data.username !=undefined)
+            if(data.username.includes("test-bot" ))
+                return;
+
+        var resetContexts = false;
+        if(data.text.includes("reset") || data.text.includes("stop")){
+            resetContexts = true;
+        }
+
+        var request = apiaiservice.textRequest(data.text, {
+            sessionId: data.user,
+            resetContexts : resetContexts
+        });
+
+        request.on('response', function(response) {
+
+            if(data.text.includes("reset") || data.text.includes("stop")){
+                rtm.sendMessage("Done. You can start a new conversation.",data.channel);
+                return;
+            }
+
+            console.log("###### api.ai response#########");
+            console.log(response);
+            if(response.result.action.includes("smalltalk")
+                || response.result.action.includes("input.unknown")
+                || response.result.action.includes("input.welcome"))
+            {
+                if(response.result.fulfillment.speech==""){
+                    response.result.fulfillment.speech="can't respond to that";
+                }
+
+                rtm.sendMessage(response.result.fulfillment.speech,data.channel);
+
+            }
+            else if(response.result.actionIncomplete){
+                rtm.sendMessage(response.result.fulfillment.speech,data.channel);
+            }
+
+            else
+            {
+
+            }
+
+        });
+        request.end();
+    }
+});
+
+####################################################
+Step 4 - Stitching api.ai and slack bot together
+####################################################
+
+# In BenTen-workshop/routes/benten.js
+# replace the rtm.on(RTM_EVENTS.MESSAGE .......... code with the below snippet
+# to process the response from api.ai, process it and give information back
+
+rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(data){
+    if(data.type == "message" && data.user != undefined) {
+        console.log(data);
+        console.log("*****************");
+        console.log(data.text);
+
+        if(data.type == "message" && data.user == undefined) return;
+
+        if(data.username !=undefined)
+            if(data.username.includes("test-bot" ))
+                return;
+
+        var resetContexts = false;
+        if(data.text.includes("reset") || data.text.includes("stop")){
+            resetContexts = true;
+        }
+
+        var request = apiaiservice.textRequest(data.text, {
+            sessionId: data.user,
+            resetContexts : resetContexts
+        });
+
+        request.on('response', function(response) {
+
+            if(data.text.includes("reset") || data.text.includes("stop")){
+                rtm.sendMessage("Done. You can start a new conversation.",data.channel);
+                return;
+            }
+
+            console.log("###### api.ai response#########");
+            console.log(response);
+            if(response.result.action.includes("smalltalk")
+                || response.result.action.includes("input.unknown")
+                || response.result.action.includes("input.welcome"))
+            {
+                if(response.result.fulfillment.speech==""){
+                    response.result.fulfillment.speech="can't respond to that";
+                }
+
+                rtm.sendMessage(response.result.fulfillment.speech,data.channel);
+
+            }
+            else if(response.result.actionIncomplete){
+                rtm.sendMessage(response.result.fulfillment.speech,data.channel);
+            }
+
+            else
+            {
+                actOnMessage(response,data.channel)
+            }
+
+        });
+        request.end();
+    }
+});
+
+var actOnMessage = function(ai,channel){
+    var slacktext= "Happy Journey! I booked your "+ "`"+ai.result.parameters.TransportMode+ "`"+" ticket from "+  "`"+ai.result.parameters.from+ "`"+" to "
+        + "`"+ ai.result.parameters.to + "`"+ " on " + "`" +ai.result.parameters.date + "`"+ " using your "+ "`" +ai.result.parameters.Paymentmode+ "`";
+
+    rtm.sendMessage(slacktext,channel);
+    return;
+}

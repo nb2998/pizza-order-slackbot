@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+      <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Jarvis</title>
+
+      <script src="assets/js/artyom.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="./css/style.css">
+      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+</head>
+<style>
+    * {
+        margin:0;
+        padding:0;
+    }
+    .navbar-wrapper {
+        margin:0;
+    }
+    .container {
+        margin-top: 0;
+    }
+
+    .panel-height {
+        height: 600px;
+        overflow-y: scroll;/ change according to your requirement/
+    }
+    .modal {
+        display:    none;
+        position:   fixed;
+        z-index:    1000;
+        top:        0;
+        left:       0;
+        height:     100%;
+        width:      100%;
+        background: rgba( 255, 255, 255, .8 )
+        url('http://i.stack.imgur.com/FhHRx.gif')
+        50% 50%
+        no-repeat;
+    }
+    /* When the body has the loading class, we turn
+       the scrollbar off with overflow:hidden */
+    body.loading {
+        overflow: hidden;
+    }
+    /* Anytime the body has the loading class, our
+       modal element will be visible */
+    body.loading .modal {
+        display: block;
+    }
+</style>
+
+<body>
+  <nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">Benten</a>
+    </div>
+    <div class="collapse navbar-collapse" id="myNavbar">
+      <ul class="nav navbar-nav">
+        <li class="active"><a href="#">Home</a></li>
+        <li class="active"><a href="./help.html" >Help</a></li>
+      </ul>
+
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="#"><span class="glyphicon glyphicon-user"></span> My Account</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+<div class="container-fluid">
+  <!--<div class="row">-->
+    <!--<div class="col-md-2">-->
+  <!--<div class="panel panel-info">-->
+        <!--<div class="panel-heading">Jarvis Help</div>-->
+        <!--<div class="panel-body">-->
+          <!--<ul class="list-group">-->
+            <!--<li class="list-group-item">Click on the "Start voice interaction" button and jarvis will start listening to you continuously and processes your commands.</li>-->
+            <!--<li class="list-group-item">In case you are working in a noisy environment Jarvis may wait after you give a commmand as it tries to listen to the voices around. So after speaking a command just say "execute" so that your command gets executed immediately.</li>-->
+            <!--<li class="list-group-item">Click on "Stop voice interaction" and Jarvis will stop listening to your commands.</li>-->
+          <!--</ul>       -->
+      <!--</div>-->
+    <!--</div>-->
+
+  <!--</div>-->
+
+    <div class="col-md-4 well">
+        <div class="row">
+      <input type="button" class="btn btn-primary"  onclick ="startArytom()" value="Start voice interaction">
+            </input>
+
+      <input type="button" class="btn btn-danger" onclick ="stopArytom()" value="Stop voice interaction" />
+
+        </div>
+        <br>
+      <div class="row form-group">
+        <label for="comment">Text Recognised:</label>
+        <textarea class="form-control" rows="2" id="comment"></textarea>
+      </div>
+        <div class="row chat_window"><div class="top_menu"><div class="buttons"><div class="button close"></div><div class="button minimize"></div><div class="button maximize"></div></div><div class="title">Chat</div></div><ul class="messages"></ul><div class="bottom_wrapper clearfix"><div class="message_input_wrapper"><input class="message_input" placeholder="Type your message here..." /></div><div class="send_message"><div class="icon"></div><div class="text">Send</div></div></div></div><div class="message_template"><li class="message"><div class="avatar"></div><div class="text_wrapper"><div class="text"></div></div></li></div>
+
+        </div>
+    <div class="col-md-8">
+      <div class="panel panel-success" id="results">
+        <div class="panel-heading">Visual Data</div>
+        <div class="panel-body panel-height" >Results in the form of tables/Charts for your queries will appear here.
+          <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br></div>
+      </div>
+  </div>
+</div>
+
+
+  <span id="output"></span>
+  <div class="modal"><!-- Place at bottom of page --></div>
+</div>
+<script>
+
+$body = $("body");
+
+var sessionId = "10000";
+var isSpeechRecognitionEnabled=false;
+var apiaiToken = "cb2f43df8a2d48b7aef44ad0b5ef7857";
+
+function resetSessionId(){
+  sessionId = Math.floor(Math.random() * 99999999) + 1 ;
+  return sessionId;
+}
+
+function startArytom() {
+    isSpeechRecognitionEnabled = true;
+    if(!artyom.isRecognizing()) {
+
+        artyom.initialize({
+            lang: "en-GB",// More languages are documented in the library
+            executionKeyword: "execute",
+            continuous: true,
+            obeyKeyword: "start again",
+            debug: true,//Show everything in the console
+            listen: true, // Start listening when this function is triggered
+            // mode:"remote"
+        });
+    }
+}
+function stopArytom(){
+    if(artyom.isSpeaking()) {
+        artyom.shutUp();
+    }
+    artyom.fatality();
+    isSpeechRecognitionEnabled = false;
+}
+
+    artyom.addCommands({
+    //The smart property of the command needs to be true
+    smart:true,
+    indexes: ["*"],
+    action: function(i, wildcard){
+        if(wildcard == "stop")
+        {
+            artyom.dontObey() ;
+            return;
+        }
+        else if(wildcard == "start again"){
+            return;
+        }
+        else{
+         var data={};
+         data.text = wildcard;
+         remoteProcessorService(data);
+       }
+    }
+});
+
+artyom.redirectRecognizedTextOutput((recognized,isFinal) => {
+
+
+    //.append("Adding more content here :)");
+
+    if(isFinal){
+
+        $("#comment").text(recognized);
+    }else{
+        $("#comment").text(recognized);
+    }
+});
+
+var remoteProcessorService = function(data){
+    console.info(data);
+
+    artyom.fatality();
+
+    $body.addClass("loading");
+    $.ajax({
+      method: 'GET',
+      url:"https://api.api.ai/api/query",
+      data: {
+        "v": "2015091",
+        "query": data.text,
+        "lang": "en",
+        "sessionId":sessionId,
+        "timezone":"2017-03-26T16:15:43+0530"
+      },
+      headers: {
+        "Authorization": "Bearer "+apiaiToken
+      },
+      dataType:"JSON",
+
+      success:function(dataFromServer){
+         $body.removeClass("loading");
+        if(dataFromServer.result.action.includes("smalltalk") || dataFromServer.result.action.includes("input.unknown") || dataFromServer.result.action.includes("input.welcome") || dataFromServer.result.action.includes("greeting"))
+        {
+          if(dataFromServer.result.fulfillment.speech==""){
+            dataFromServer.result.fulfillment.speech="can't respond to that";
+          }
+
+           replyMessage(dataFromServer.result.fulfillment.speech);
+          artyom.say(dataFromServer.result.fulfillment.speech,{
+              onStart:function(){
+
+            },
+              onEnd: function(){
+                  console.log("artyom stopped speaking"+ artyom.isSpeaking());
+                  if(!artyom.isSpeaking() && isSpeechRecognitionEnabled ) {
+                      startArytom();
+                  }
+              }
+         });
+        }
+        else if(dataFromServer.result.actionIncomplete){
+            replyMessage(dataFromServer.result.fulfillment.speech);
+          artyom.say(dataFromServer.result.fulfillment.speech,{
+              onStart:function(){
+
+              },
+              onEnd: function(){
+                  console.log("artyom stopped speaking"+ artyom.isSpeaking());
+                  if(!artyom.isSpeaking() &&  isSpeechRecognitionEnabled) {
+                      startArytom();
+                  }
+              }
+         });
+        }
+        else
+        {
+          resetSessionId();
+              $body.addClass("loading");
+          getAction(dataFromServer).then(function(action){
+              $body.removeClass("loading");
+              console.log(action);
+              console.log($('#results').find('.panel-body').html(action.html));
+               artyom.say(action.text,{
+
+                  onEnd: function(){
+                      console.log("artyom stopped speaking"+ artyom.isSpeaking());
+                      if(!artyom.isSpeaking() && isSpeechRecognitionEnabled) {
+                          startArytom();
+                       }
+                      }
+                });
+
+            });
+           console.log(dataFromServer);
+
+      }
+    },
+      error:function(){
+         $body.removeClass("loading");
+           artyom.say("something has gone wrong. Please try again.",{
+
+                  onEnd: function() {
+
+                      if (!artyom.isSpeaking() && isSpeechRecognitionEnabled) {
+                          startArytom();
+                      }
+                  }
+                  });
+      }
+    });
+};
+
+var getAction = function(ai){
+  return new Promise((resolve, reject) => {
+
+               $.ajax({
+                    type: 'POST',
+
+                    url:"http://localhost:8095/jarvis/act",
+
+                    data: ai,
+        //            dataType:"JSON",
+
+                    success:function(dataFromServer){
+
+                      resolve(dataFromServer);
+
+                    },
+                    error:function(err){
+                       $body.removeClass("loading");
+                        artyom.say("something has gone wrong. Please try again.",{
+
+                        onEnd: function(){
+
+                            if(!artyom.isSpeaking() &&  isSpeechRecognitionEnabled) {
+                                startArytom();
+                            }
+                            }
+                        });
+                  }
+
+  });
+ })
+};
+
+
+    var Message;
+    Message = function (arg) {
+        this.text = arg.text, this.message_side = arg.message_side;
+        this.draw = function (_this) {
+            return function () {
+                var $message;
+                $message = $($('.message_template').clone().html());
+                $message.addClass(_this.message_side).find('.text').html(_this.text);
+                $('.messages').append($message);
+                return setTimeout(function () {
+                    return $message.addClass('appeared');
+                }, 0);
+            };
+        }(this);
+        return this;
+    };
+
+        var getMessageText, message_side, sendMessage,replyMessage;
+
+        getMessageText = function () {
+            var $message_input;
+            $message_input = $('.message_input');
+            return $message_input.val();
+        };
+        sendMessage = function (text) {
+            var $messages, message;
+            message_side = 'left';
+            if (text.trim() === '') {
+                return;
+            }
+            $('.message_input').val('');
+            $messages = $('.messages');
+
+            message = new Message({
+                text: text,
+                message_side: message_side
+            });
+            message.draw();
+            remoteProcessorService(message);
+            return $messages.animate({ scrollTop: $messages.prop('scrollHeight') }, 300);
+        };
+
+    replyMessage = function (text) {
+        var $messages, message;
+        if (text.trim() === '') {
+            return;
+        }
+        message_side = 'right';
+        $('.message_input').val('');
+        $messages = $('.messages');
+
+        message = new Message({
+            text: text,
+            message_side: message_side
+        });
+        message.draw();
+
+        return $messages.animate({ scrollTop: $messages.prop('scrollHeight') }, 300);
+    };
+        $('.send_message').click(function (e) {
+            return sendMessage(getMessageText());
+        });
+        $('.message_input').keyup(function (e) {
+            if (e.which === 13) {
+                return sendMessage(getMessageText());
+            }
+        });
+
+
+</script>
+
+
+
+</body>
+</html>

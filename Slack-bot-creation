@@ -1,0 +1,22 @@
+# New Slack Team & Bot
+
+Steps to create a new Slack Team:
+1. Goto https://slack.com/
+2. Click on Create New Team
+3. Provide your email ID (Personal should be fine)
+4. Check your email and enter the code to verify your email
+5. Provide your name and set a password
+6. Add some details to your team in the next page
+7. Provide an easy company name like “test-divakar”
+8. Team URL should be unique - Also remember this URL - this is what is used to login to your slack instance
+9. Agree with the terms
+10. Skip the invite step
+11. You are up and running with your own instance of Slack.
+
+Steps to create a bot in your Slack team:
+1. Goto your team URL/apps. Ex: https://test-visual.slack.com/apps
+2. Search for bot in the search bar and select “bots”
+3. In the bots landing page click on Add configuration
+4. Provide a bot name. Ex: divakar-bot and click on Add Bot integration
+5. In the Setup instruction page: Copy the API Token. Ex: xoxb-22672546-n1X9APk3D0tfksr81NJj6VAM
+6. Save the integration
