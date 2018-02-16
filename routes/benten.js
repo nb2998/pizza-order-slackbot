@@ -188,16 +188,21 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(data){
     }
 });
 
-
-var client = new Client();
-
-// set content-type header and data as json in args parameter
-var args = {
-    data: { name: "nb2998", crust : "cheese burst", type: "farm fresh", size: "medium", extraToppings: "tomato"},
-    headers: { "Content-Type": "application/x-www-form-urlencoded" }
-};
-
 var apiCall = function(response,channel){
+  var client = new Client();
+
+  // set content-type header and data as json in args parameter
+  var array = response.result.parameters.extraToppings;
+  var toppings;
+  for (var i = 0; i < array.length; i++) {
+    toppings+=array[i];
+    toppings+=(i!=array.length-1)?"&":"";
+  }
+  var args = {
+      data: { name: response.result.parameters.name, crust : response.result.parameters.crust, type: response.result.parameters.type, size: response.result.parameters.size, extraToppings:toppings },
+      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+  };
+
   client.post("http://ec2-35-163-216-254.us-west-2.compute.amazonaws.com:8080/api/pizza/order", args, function (data1, response) {
       // parsed response body as js object
       //console.log(data1);
@@ -218,13 +223,16 @@ var apiCall = function(response,channel){
   });
 }
 
-
-
 var actOnMessage = function(ai,channel){
-    var slacktext= "Congratulations! you have successfully placed an order for "+ "`" +ai.result.parameters.size +"`" +" "+ "`"+ai.result.parameters.type+ "`"+" having "
-        + "`"+ ai.result.parameters.crust + "`"+ " crust " ;
-
-    rtm.sendMessage(slacktext,channel);
-    return;
+  var array = ai.result.parameters.extraToppings;
+  var slacktext= "Congratulations! you have successfully placed an order for "+ "`" +ai.result.parameters.size +"`" +" "+ "`"+ai.result.parameters.type+ "`"+" pizza having "
+      + "`"+ ai.result.parameters.crust + "`"+ " crust "+ " with extra toppings " +"`" ;
+  for (var i = 0; i < array.length; i++) {
+    slacktext+=array[i];
+    slacktext+=(i!=array.length-1)?", ":"."+"`";
+  }
+  console.log(ai.result.parameters.extraToppings);
+  rtm.sendMessage(slacktext,channel);
+  return;
 }
 module.exports = router;
